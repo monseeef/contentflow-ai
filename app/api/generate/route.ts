@@ -120,22 +120,22 @@ async function generateWithGemini({
 }
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Please log in to generate content." }, { status: 401 });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Gemini is not configured yet. Add GEMINI_API_KEY to your environment." },
-      { status: 503 },
-    );
-  }
-
   try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Please log in to generate content." }, { status: 401 });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Gemini is not configured yet. Add GEMINI_API_KEY to your environment." },
+        { status: 503 },
+      );
+    }
+
     const body = (await request.json()) as {
       prompt?: unknown;
       type?: unknown;
@@ -223,6 +223,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "The database schema is not migrated yet. Apply the latest Prisma schema and try again." },
         { status: 500 },
+      );
+    }
+
+    if (
+      message.toLowerCase().includes("connect") ||
+      message.toLowerCase().includes("database") ||
+      message.toLowerCase().includes("prisma")
+    ) {
+      return NextResponse.json(
+        { error: "The database is temporarily unavailable. Please try again in a moment." },
+        { status: 503 },
       );
     }
 

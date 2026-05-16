@@ -1,9 +1,32 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const siteName = "ContentFlow AI";
+const siteDescription =
+  "Premium AI content generation workspace for creators and modern SaaS teams.";
+
 export const metadata: Metadata = {
-  title: "ContentFlow AI",
-  description: "Premium AI content operations for modern teams.",
+  applicationName: siteName,
+  title: {
+    default: siteName,
+    template: `%s | ${siteName}`,
+  },
+  description: siteDescription,
+  openGraph: {
+    title: siteName,
+    description: siteDescription,
+    siteName,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteName,
+    description: siteDescription,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#020617",
 };
 
 export default function RootLayout({
