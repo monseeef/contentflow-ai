@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String?
+  image        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  generations  Generation[]
+}
+
+model Generation {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      GenerationType
+  prompt    String
+  output    String
+  platform  String?
+  tone      String?
+  createdAt DateTime       @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum GenerationType {
+  CAPTION
+  HOOK
+  HASHTAGS
+  REWRITE
+  CONTENT_IDEA
+}
