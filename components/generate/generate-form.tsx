@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { Check, Clipboard, WandSparkles } from "lucide-react";
 
 import { GlassCard } from "@/components/glass-card";
@@ -9,11 +10,36 @@ import { GradientButton } from "@/components/gradient-button";
 const platforms = ["TikTok", "Instagram", "YouTube Shorts", "LinkedIn"];
 const tones = ["Confident", "Playful", "Educational", "Direct", "Premium"];
 const contentTypes = [
-  { label: "Caption", value: "CAPTION" },
-  { label: "Hook", value: "HOOK" },
-  { label: "Hashtags", value: "HASHTAGS" },
-  { label: "Rewrite", value: "REWRITE" },
-  { label: "Content idea", value: "CONTENT_IDEA" },
+  {
+    label: "Caption",
+    value: "CAPTION",
+    placeholder:
+      "Example: Launch caption for a premium AI content workflow app for startup founders.",
+  },
+  {
+    label: "Hook",
+    value: "HOOK",
+    placeholder:
+      "Example: Hooks for a short-form video about saving 5 hours a week on content planning.",
+  },
+  {
+    label: "Hashtags",
+    value: "HASHTAGS",
+    placeholder:
+      "Example: Hashtag clusters for a creator productivity tool targeting solopreneurs.",
+  },
+  {
+    label: "Rewrite",
+    value: "REWRITE",
+    placeholder:
+      "Paste a rough draft and describe how you want it sharpened for the target platform.",
+  },
+  {
+    label: "Content idea",
+    value: "CONTENT_IDEA",
+    placeholder:
+      "Example: Content ideas for explaining an AI SaaS feature to non-technical marketers.",
+  },
 ];
 
 type Generation = {
@@ -26,11 +52,21 @@ type Generation = {
   createdAt: string;
 };
 
-export function GenerateForm() {
+function getSafeInitialType(initialType?: string) {
+  return contentTypes.some((type) => type.value === initialType)
+    ? initialType
+    : "CAPTION";
+}
+
+export function GenerateForm({ initialType }: { initialType?: string }) {
   const [generation, setGeneration] = useState<Generation | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedType, setSelectedType] = useState(getSafeInitialType(initialType));
+
+  const selectedContentType =
+    contentTypes.find((type) => type.value === selectedType) ?? contentTypes[0];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,7 +136,7 @@ export function GenerateForm() {
               required
               minLength={10}
               rows={7}
-              placeholder="Describe the campaign, audience, offer, and desired outcome..."
+              placeholder={selectedContentType.placeholder}
               className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
             />
           </label>
@@ -138,6 +174,8 @@ export function GenerateForm() {
               </span>
               <select
                 name="type"
+                value={selectedType}
+                onChange={(event) => setSelectedType(event.target.value)}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
               >
                 {contentTypes.map((type) => (
@@ -170,6 +208,11 @@ export function GenerateForm() {
             <h2 className="mt-3 text-2xl font-semibold">
               {generation ? "Generated result" : "Ready for Gemini"}
             </h2>
+            {generation ? (
+              <p className="mt-2 text-sm font-medium text-emerald-300">
+                Saved to history
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -187,6 +230,22 @@ export function GenerateForm() {
             : generation?.output ??
               "Your generated content will appear here and automatically save to history."}
         </div>
+        {generation ? (
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/history"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/40 hover:bg-white/10 hover:text-white"
+            >
+              View history
+            </Link>
+            <Link
+              href={`/generate?type=${generation.type}`}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/40 hover:bg-white/10 hover:text-white"
+            >
+              Generate another
+            </Link>
+          </div>
+        ) : null}
       </GlassCard>
     </div>
   );
