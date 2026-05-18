@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { Generation, GenerationType } from "@prisma/client";
+import type { LucideIcon } from "lucide-react";
 import {
   CalendarClock,
   FileText,
@@ -22,6 +24,22 @@ const typeLabels: Record<string, string> = {
   HASHTAGS: "Hashtags",
   REWRITE: "Rewrite",
   CONTENT_IDEA: "Content idea",
+};
+
+type RecentGeneration = Pick<
+  Generation,
+  "id" | "type" | "prompt" | "createdAt"
+>;
+
+type GenerationTypeRecord = {
+  type: GenerationType;
+};
+
+type DashboardMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  icon: LucideIcon;
 };
 
 const quickActions = [
@@ -78,34 +96,71 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const weekStart = getWeekStart();
 
-  const [totalGenerations, weeklyGenerations, recentGenerations, typeCounts] =
-    await Promise.all([
-      prisma.generation.count({ where: { userId: user.id } }),
-      prisma.generation.count({
-        where: {
-          userId: user.id,
-          createdAt: { gte: weekStart },
-        },
-      }),
-      prisma.generation.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      prisma.generation.groupBy({
-        by: ["type"],
-        where: { userId: user.id },
-        _count: { type: true },
-        orderBy: { _count: { type: "desc" } },
-      }),
-    ]);
+  const totalGenerationsPromise: Promise<number> = prisma.generation.count({
+    where: { userId: user.id },
+  });
+  const weeklyGenerationsPromise: Promise<number> = prisma.generation.count({
+    where: {
+      userId: user.id,
+      createdAt: { gte: weekStart },
+    },
+  });
+  const recentGenerationsPromise: Promise<RecentGeneration[]> =
+    prisma.generation.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        type: true,
+        prompt: true,
+        createdAt: true,
+      },
+    });
+  const generationTypesPromise: Promise<GenerationTypeRecord[]> =
+    prisma.generation.findMany({
+      where: { userId: user.id },
+      select: {
+        type: true,
+      },
+    });
 
-  const mostUsedType = typeCounts[0]
-    ? typeLabels[typeCounts[0].type] ?? typeCounts[0].type
+  const [totalGenerations, weeklyGenerations, recentGenerations, generationTypes]: [
+    number,
+    number,
+    RecentGeneration[],
+    GenerationTypeRecord[],
+  ] = await Promise.all([
+    totalGenerationsPromise,
+    weeklyGenerationsPromise,
+    recentGenerationsPromise,
+    generationTypesPromise,
+  ]);
+
+  const typeCounts = generationTypes.reduce<Record<GenerationType, number>>(
+    (counts, generation) => {
+      counts[generation.type] += 1;
+      return counts;
+    },
+    {
+      CAPTION: 0,
+      HOOK: 0,
+      HASHTAGS: 0,
+      REWRITE: 0,
+      CONTENT_IDEA: 0,
+    },
+  );
+
+  const mostUsedTypeEntry = Object.entries(typeCounts).sort(
+    ([, countA], [, countB]) => countB - countA,
+  )[0] as [GenerationType, number] | undefined;
+
+  const mostUsedType = mostUsedTypeEntry?.[1]
+    ? typeLabels[mostUsedTypeEntry[0]] ?? mostUsedTypeEntry[0]
     : "No data yet";
   const lastGenerationDate = recentGenerations[0]?.createdAt ?? null;
 
-  const metrics = [
+  const metrics: DashboardMetric[] = [
     {
       label: "Total generations",
       value: totalGenerations.toString(),
@@ -121,7 +176,9 @@ export default async function DashboardPage() {
     {
       label: "Most used type",
       value: mostUsedType,
-      detail: typeCounts[0] ? `${typeCounts[0]._count.type} saved` : "Start generating",
+      detail: mostUsedTypeEntry?.[1]
+        ? `${mostUsedTypeEntry[1]} saved`
+        : "Start generating",
       icon: Lightbulb,
     },
     {
@@ -227,7 +284,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentGenerations.map((generation) => (
+              {recentGenerations.map((generation: RecentGeneration) => (
                 <Link
                   key={generation.id}
                   href="/history"

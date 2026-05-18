@@ -1,4 +1,5 @@
 import { History, Sparkles } from "lucide-react";
+import type { Generation } from "@prisma/client";
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { GlassCard } from "@/components/glass-card";
@@ -7,11 +8,25 @@ import { HistoryList } from "@/components/history/history-list";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type HistoryGenerationRecord = Pick<
+  Generation,
+  "id" | "type" | "prompt" | "output" | "platform" | "tone" | "createdAt"
+>;
+
 export default async function HistoryPage() {
   const user = await requireUser();
-  const generations = await prisma.generation.findMany({
+  const generations: HistoryGenerationRecord[] = await prisma.generation.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      type: true,
+      prompt: true,
+      output: true,
+      platform: true,
+      tone: true,
+      createdAt: true,
+    },
   });
 
   return (
@@ -40,7 +55,7 @@ export default async function HistoryPage() {
         </GlassCard>
       ) : (
         <HistoryList
-          generations={generations.map((generation) => ({
+          generations={generations.map((generation: HistoryGenerationRecord) => ({
             id: generation.id,
             type: generation.type,
             prompt: generation.prompt,
