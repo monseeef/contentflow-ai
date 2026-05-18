@@ -28,7 +28,13 @@ const typeLabels: Record<string, string> = {
 
 type RecentGeneration = Pick<
   Generation,
-  "id" | "type" | "prompt" | "createdAt"
+  | "id"
+  | "type"
+  | "prompt"
+  | "output"
+  | "platform"
+  | "tone"
+  | "createdAt"
 >;
 
 type GenerationTypeRecord = {
@@ -114,6 +120,9 @@ export default async function DashboardPage() {
         id: true,
         type: true,
         prompt: true,
+        output: true,
+        platform: true,
+        tone: true,
         createdAt: true,
       },
     });
@@ -284,7 +293,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentGenerations.map((generation: RecentGeneration) => (
+              {recentGenerations.map((generation) => (
                 <Link
                   key={generation.id}
                   href="/history"
