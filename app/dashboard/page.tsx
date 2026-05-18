@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { Generation, GenerationType } from "@prisma/client";
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, FileText, Hash, Lightbulb, PenLine, Sparkles, TrendingUp, WandSparkles } from "lucide-react";
 
@@ -17,10 +16,25 @@ const typeLabels: Record<string, string> = {
   CONTENT_IDEA: "Content idea",
 };
 
-type RecentGeneration = Pick<Generation, "id" | "type" | "prompt" | "output" | "platform" | "tone" | "createdAt">;
+type GenerationType =
+  | "CAPTION"
+  | "HOOK"
+  | "HASHTAGS"
+  | "REWRITE"
+  | "CONTENT_IDEA";
+
+type DashboardGeneration = {
+  id: string;
+  type: string;
+  prompt: string;
+  output: string;
+  platform: string | null;
+  tone: string | null;
+  createdAt: Date;
+};
 
 type GenerationTypeRecord = {
-  type: GenerationType;
+  type: string;
 };
 
 type DashboardMetric = {
@@ -93,7 +107,7 @@ export default async function DashboardPage() {
       createdAt: { gte: weekStart },
     },
   });
-  const recentGenerationsPromise: Promise<RecentGeneration[]> = prisma.generation.findMany({
+  const recentGenerationsPromise: Promise<DashboardGeneration[]> = prisma.generation.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 5,
@@ -117,7 +131,7 @@ export default async function DashboardPage() {
   const [totalGenerations, weeklyGenerations, recentGenerations, generationTypes]: [
     number,
     number,
-    RecentGeneration[],
+    DashboardGeneration[],
     GenerationTypeRecord[],
   ] = await Promise.all([
     totalGenerationsPromise,
@@ -128,7 +142,10 @@ export default async function DashboardPage() {
 
   const typeCounts = generationTypes.reduce<Record<GenerationType, number>>(
     (counts, generation) => {
-      counts[generation.type] += 1;
+      if (generation.type in counts) {
+        counts[generation.type as GenerationType] += 1;
+      }
+
       return counts;
     },
     {
@@ -256,7 +273,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentGenerations.map((generation: any) => (
+              {recentGenerations.map((generation) => (
                 <Link
                   key={generation.id}
                   href="/history"
